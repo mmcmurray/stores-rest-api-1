@@ -20,6 +20,11 @@ api = Api(app)
 
 jwt = JWT(app, authenticate, identity)  # /auth
 
+## Routes and API resources.
+@app.route('/')
+def home():
+	return render_template('index.html')
+
 api.add_resource(Store, '/store/<string:name>')
 api.add_resource(Item, '/item/<string:name>')
 api.add_resource(ItemList, '/items')
