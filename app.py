@@ -23,7 +23,8 @@ jwt = JWT(app, authenticate, identity)  # /auth
 ## Routes and API resources.
 @app.route('/')
 def home():
-	return render_template('index.html')
+    OC_POD_NAME = os.environ.get('OC_POD_NAME','foo')
+    return render_template('index.html', oc_pod_name=OC_POD_NAME)
 
 api.add_resource(Store, '/store/<string:name>')
 api.add_resource(Item, '/item/<string:name>')
