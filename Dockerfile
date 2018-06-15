@@ -5,4 +5,4 @@ WORKDIR /code
 ADD requirements.txt /code/
 RUN pip install -r requirements.txt
 ADD . /code/
-CMD [ "uwsgi", "--socket", "0.0.0.0:8080" ]
+CMD [ "uwsgi", "--ini", "uwsgi.ini" ]
