@@ -115,11 +115,20 @@ oc new-app jenkins-persistent -p ENABLE_OAUTH=true -p MEMORY_LIMIT=2.0Gi -n ${__
 	oc new-app wkulhanek/gogs:11.34 -l name=gogs
 	```
 	3. Configure a PVC (Persistent Volume Claim) for the Gogs service to use.
+
 	```bash
 	oc create -f ocp_helpers/1_4-03-gogs_pvc-yaml
 	oc set volume dc/gogs --add --overwrite --name=gogs-volume-1 --mount-path=/data/ --type persistentVolumeClaim --claim-name=gogs-data
 	```
 	4. Create a `ConfigMap` so that we can set Gogs to talk to the `postresql` persistent database.
+	```bash
+	oc create configmap gogs --from-file=ocp_helpers/gogs/app.ini
+	oc set volume dc/gogs --add --overwrite --name=config-volume -m /opt/gogs/custom/conf/ -t configmap --configmap-name=gogs
+	```
+	5. Expose route to Gogs server:
+	```bash
+	oc expose svc/gogs
+	```
 
 ---
 
