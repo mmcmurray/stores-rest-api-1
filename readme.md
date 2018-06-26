@@ -55,9 +55,9 @@ export __OCP_PREFIX='mmm'                                         # Ensure you s
 ```
 
 2. Login to OCP with `oc` utility (installation instructions can be found [here](https://docs.openshift.com/container-platform/3.4/cli_reference/get_started_cli.html) )
-```
-oc login ${__OCP_CLUSTER}
-```
+	```
+	oc login ${__OCP_CLUSTER}
+	```
 3. Open a browser and login to the Web Console for your OCP cluster using the URL defined above.
    We will use this for watching and observing our builds and deployments.
 
