@@ -110,30 +110,42 @@ oc new-app jenkins-persistent -p ENABLE_OAUTH=true -p MEMORY_LIMIT=2.0Gi -n ${__
 	```bash
 	oc exec $(oc get pods | grep postgresql | grep -v deploy | gawk '{print $1}') -- bash -c 'createdb gogs -O sonar'
 	```
-	2. Launch the Gogs service:
+	2. Configure a PVC (Persistent Volume Claim) for the Gogs service to use.
+	```bash
+	oc create -f ocp_helpers/1_4-03-gogs_pvc-yaml
+	```
+	3. Create a `ConfigMap` so that we can configure Gogs to talk to the `postgresql` persistent database.
+	```bash
+	oc create configmap gogs --from-file=ocp_helpers/gogs/app.ini
+	```
+	4. Launch the Gogs service:
 	```bash
 	oc new-app wkulhanek/gogs:11.34 -l name=gogs
 	```
-	3. Configure a PVC (Persistent Volume Claim) for the Gogs service to use.
-
+	5. Set the Gogs deployment config to use the `gogs-data` PVC
 	```bash
-	oc create -f ocp_helpers/1_4-03-gogs_pvc-yaml
 	oc set volume dc/gogs --add --overwrite --name=gogs-volume-1 --mount-path=/data/ --type persistentVolumeClaim --claim-name=gogs-data
 	```
-	4. Create a `ConfigMap` so that we can set Gogs to talk to the `postresql` persistent database.
-	```bash
-	oc create configmap gogs --from-file=ocp_helpers/gogs/app.ini
+	6. Set the Gogs deployment config to use the `gogs` ConfigMap
+	```bash	
 	oc set volume dc/gogs --add --overwrite --name=config-volume -m /opt/gogs/custom/conf/ -t configmap --configmap-name=gogs
 	```
-	5. Expose route to Gogs server:
+	7. Expose route to Gogs server:
 	```bash
 	oc expose svc/gogs
 	```
-	6. Navigate to the Gogs UI (can be found via the following:)
-	7. Register a new user in Gogs UI so we can create an Organization and Repo.
-		1. Let's call the organization `ocp_adv_dev`
-		2. Let's call the repo `stores-rest-api-fork`
-	8. Add this project as a remote target to the Git repo.
+	8. Navigate to the Gogs UI (can be found via the following:)
+	```bash
+	oc get route | grep gogs | gawk '{print $2}' | sed -e 's/\(.*\)/http:\/\/\1/g'
+	```
+	9. Register a new user in Gogs UI so we can create an Organization and Repo.
+		1. **Organization:** `ocp_adv_dev`
+		2. **Repo:** `stores-rest-api-fork`
+	10. Add this project as a remote target to the Git repo.
+	```bash
+	git remote add gogs http://<user>:<pass>@$(oc get route gogs -n ${__OCP_PREFIX}-devops --template='{{ .spec.host }}')/ocp_adv_dev/stores-rest-api-fork
+	```
+5. Create and configure Nexus service for an artifactory / private docker registry.
 
 ---
 
