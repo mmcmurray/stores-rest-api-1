@@ -48,14 +48,16 @@ Sample REST API for Stores and Inventories.
 ## Prerequisites:
 
 1. Set your local environment vars to ensure we prefix all of our projects and applications/services.
-	```
-	export __OCP_CLUSTER='https://master.na39.openshift.opentlc.com/' # Ensure you replace this with your cluster's URL.
-	export __OCP_PREFIX='mmm'                                         # Ensure you set this to something like your deployment GUID or Initials
-	```
+
+```
+export __OCP_CLUSTER='https://master.na39.openshift.opentlc.com/' # Ensure you replace this with your cluster's URL.
+export __OCP_PREFIX='mmm'                                         # Ensure you set this to something like your deployment GUID or Initials
+```
+
 2. Login to OCP with `oc` utility (installation instructions can be found [here](https://docs.openshift.com/container-platform/3.4/cli_reference/get_started_cli.html) )
-	```
-	oc login ${__OCP_CLUSTER}
-	```
+```
+oc login ${__OCP_CLUSTER}
+```
 3. Open a browser and login to the Web Console for your OCP cluster using the URL defined above.
    We will use this for watching and observing our builds and deployments.
 
