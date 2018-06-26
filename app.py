@@ -9,13 +9,15 @@ from resources.user import UserRegister
 from resources.item import Item, ItemList
 from resources.store import Store, StoreList
 
+## Objects and definitions.
 app = Flask(__name__)
 
 app.config['DEBUG'] = True
+app.config['PROPAGATE_EXCEPTIONS'] = True # Required for JTW to send proper response codes... 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///data.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = 'jose'
+app.secret_key = 's00p3rs3cr3tk3y'
 api = Api(app)
 
 jwt = JWT(app, authenticate, identity)  # /auth
