@@ -2,7 +2,7 @@
     "kind": "Template",
     "apiVersion": "v1",
     "metadata": {
-        "name": "sonarqube",
+        "name": "gogs",
         "creationTimestamp": null
     },
     "objects": [
@@ -10,26 +10,26 @@
             "kind": "Service",
             "apiVersion": "v1",
             "metadata": {
-                "name": "${SONARQUBE_SERVICE_NAME}",
+                "name": "${GOGS_SERVICE_NAME}",
                 "creationTimestamp": null,
                 "labels": {
-                    "app": "${SONARQUBE_SERVICE_NAME}",
-                    "name": "${SONARQUBE_SERVICE_NAME}"
+                    "app": "${GOGS_SERVICE_NAME}",
+                    "name": "${GOGS_SERVICE_NAME}"
                 }
             },
             "spec": {
                 "ports": [
                     {
-                        "name": "9000-tcp",
+                        "name": "3000-tcp",
                         "protocol": "TCP",
-                        "port": 9000,
-                        "targetPort": 9000
+                        "port": 3000,
+                        "targetPort": 3000
                     }
                 ],
                 "selector": {
-                    "app": "${SONARQUBE_SERVICE_NAME}",
-                    "deploymentconfig": "sonarqube",
-                    "name": "${SONARQUBE_SERVICE_NAME}"
+                    "app": "${GOGS_SERVICE_NAME}",
+                    "deploymentconfig": "${GOGS_SERVICE_NAME}",
+                    "name": "${GOGS_SERVICE_NAME}"
                 },
                 "type": "ClusterIP",
                 "sessionAffinity": "None"
@@ -42,10 +42,12 @@
             "kind": "DeploymentConfig",
             "apiVersion": "v1",
             "metadata": {
-                "name": "${SONARQUBE_SERVICE_NAME}",
+                "name": "${GOGS_SERVICE_NAME}",
+                "generation": 1,
+                "creationTimestamp": null,
                 "labels": {
-                    "app": "${SONARQUBE_SERVICE_NAME}",
-                    "name": "${SONARQUBE_SERVICE_NAME}"
+                    "app": "${GOGS_SERVICE_NAME}",
+                    "name": "${GOGS_SERVICE_NAME}"
                 }
             },
             "spec": {
@@ -63,51 +65,39 @@
                     }
                 ],
                 "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "test": false,
                 "selector": {
-                    "app": "${SONARQUBE_SERVICE_NAME}",
-                    "deploymentconfig": "${SONARQUBE_SERVICE_NAME}",
-                    "name": "${SONARQUBE_SERVICE_NAME}"
+                    "app": "${GOGS_SERVICE_NAME}",
+                    "deploymentconfig": "${GOGS_SERVICE_NAME}",
+                    "name": "${GOGS_SERVICE_NAME}"
                 },
                 "template": {
                     "metadata": {
                         "creationTimestamp": null,
                         "labels": {
-                            "app": "${SONARQUBE_SERVICE_NAME}",
-                            "deploymentconfig": "${SONARQUBE_SERVICE_NAME}",
-                            "name": "${SONARQUBE_SERVICE_NAME}"
+                            "app": "${GOGS_SERVICE_NAME}",
+                            "deploymentconfig": "${GOGS_SERVICE_NAME}",
+                            "name": "${GOGS_SERVICE_NAME}"
                         }
                     },
                     "spec": {
                         "volumes": [
                             {
-                                "name": "${SONARQUBE_SERVICE_NAME}-data",
+                                "name": "${GOGS_SERVICE_NAME}-data",
                                 "persistentVolumeClaim": {
-                                    "claimName": "${SONARQUBE_SERVICE_NAME}-pvc"
+                                    "claimName": "${GOGS_SERVICE_NAME}-pvc"
                                 }
                             }
                         ],
                         "containers": [
                             {
-                                "name": "sonarqube",
-                                "image": "wkulhanek/sonarqube",
+                                "name": "gogs",
+                                "image": "wkulhanek/gogs",
                                 "ports": [
                                     {
-                                        "containerPort": 9000,
+                                        "containerPort": 3000,
                                         "protocol": "TCP"
-                                    }
-                                ],
-                                "env": [
-                                    {
-                                        "name": "SONARQUBE_JDBC_PASSWORD",
-                                        "value": "${DATABASE_PASS}"
-                                    },
-                                    {
-                                        "name": "SONARQUBE_JDBC_URL",
-                                        "value": "jdbc:postgresql://${DATABASE_HOST}/${DATABASE_NAME}"
-                                    },
-                                    {
-                                        "name": "SONARQUBE_JDBC_USERNAME",
-                                        "value": "${DATABASE_USER}"
                                     }
                                 ],
                                 "resources": {
@@ -117,13 +107,13 @@
                                     },
                                     "requests": {
                                         "cpu": "1",
-                                        "memory": "1Gi"
+                                        "memory": "512Mi"
                                     }
                                 },
                                 "volumeMounts": [
                                     {
-                                        "name": "${SONARQUBE_SERVICE_NAME}-data",
-                                        "mountPath": "/opt/sonarqube/data"
+                                        "name": "${GOGS_SERVICE_NAME}-data",
+                                        "mountPath": "/data"
                                     }
                                 ],
                                 "livenessProbe": {
@@ -133,7 +123,7 @@
                                             "ok"
                                         ]
                                     },
-                                    "initialDelaySeconds": 40,
+                                    "initialDelaySeconds": 60,
                                     "timeoutSeconds": 1,
                                     "periodSeconds": 10,
                                     "successThreshold": 1,
@@ -141,11 +131,11 @@
                                 },
                                 "readinessProbe": {
                                     "httpGet": {
-                                        "path": "/about",
-                                        "port": 9000,
+                                        "path": "/",
+                                        "port": 3000,
                                         "scheme": "HTTP"
                                     },
-                                    "initialDelaySeconds": 20,
+                                    "initialDelaySeconds": 60,
                                     "timeoutSeconds": 1,
                                     "periodSeconds": 10,
                                     "successThreshold": 1,
@@ -169,21 +159,21 @@
             "kind": "Route",
             "apiVersion": "v1",
             "metadata": {
-                "name": "${SONARQUBE_SERVICE_NAME}",
+                "name": "${GOGS_SERVICE_NAME}",
                 "creationTimestamp": null,
                 "labels": {
-                    "app": "sonarqube",
-                    "name": "${SONARQUBE_SERVICE_NAME}"
+                    "app": "${GOGS_SERVICE_NAME}",
+                    "name": "${GOGS_SERVICE_NAME}"
                 }
             },
             "spec": {
                 "to": {
                     "kind": "Service",
-                    "name": "${SONARQUBE_SERVICE_NAME}",
+                    "name": "${GOGS_SERVICE_NAME}",
                     "weight": 100
                 },
                 "port": {
-                    "targetPort": "9000-tcp"
+                    "targetPort": "3000-tcp"
                 },
                 "wildcardPolicy": "None"
             },
@@ -195,7 +185,7 @@
                             {
                                 "type": "Admitted",
                                 "status": "True",
-                                "lastTransitionTime": "2018-06-27T03:21:51Z"
+                                "lastTransitionTime": "2018-06-27T05:14:41Z"
                             }
                         ],
                         "wildcardPolicy": "None"
@@ -207,7 +197,7 @@
             "apiVersion": "v1",
             "kind": "PersistentVolumeClaim",
             "metadata": {
-                "name": "${SONARQUBE_SERVICE_NAME}-pvc"
+                "name": "${GOGS_SERVICE_NAME}-pvc"
             },
             "spec": {
                 "accessModes": [
@@ -223,53 +213,10 @@
     ],
     "parameters": [
         {
-            "description": "The name of the OpenShift Service exposed for the Sonarqube container.",
-            "displayName": "Sonarqube Service Name",
-            "name": "SONARQUBE_SERVICE_NAME",
-            "value": "sonarqube"
-        },
-        {
-            "description": "The database host.  This can typically be left alone.",
-            "displayName": "Database Hostname",
-            "name": "DATABASE_HOST",
-            "value": "postgresql"
-        },
-        {
-            "description": "The name of the database we connect to.",
-            "displayName": "Database Name",
-            "name": "DATABASE_NAME",
-            "value": "sonar"
-        },        
-        {
-            "description": "The username used to connect to the database.",
-            "displayName": "Database Username",
-            "name": "DATABASE_USER",
-            "value": "dbuser"
-        },
-        {
-            "description": "The password used to connect to the database",
-            "displayName": "Database Password",
-            "name": "DATABASE_PASS",
-            "value": "p4ssw0rd"
-        },
-        {
-            "description": "Volume space available for data, e.g. 512Mi, 2Gi.",
-            "displayName": "Volume Capacity",
-            "name": "VOLUME_CAPACITY",
-            "required": true,
-            "value": "4Gi"
-        },
-        {
-            "description": "The OpenShift Namespace where the Sonarqube ImageStream resides.",
-            "displayName": "Sonarqube ImageStream Namespace",
-            "name": "NAMESPACE",
-            "value": "openshift"
-        },
-        {
-            "description": "Name of the ImageStreamTag to be used for the Sonarqube image.",
-            "displayName": "Sonarqube ImageStreamTag",
-            "name": "SONARQUBE_IMAGE_STREAM_TAG",
-            "value": "sonarqube:6.7.3"
+            "description": "The name of the OpenShift Service exposed for the Gogs container.",
+            "displayName": "Gogs Service Name",
+            "name": "GOGS_SERVICE_NAME",
+            "value": "gogs"
         }
     ]
 }

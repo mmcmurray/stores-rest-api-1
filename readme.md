@@ -88,15 +88,12 @@ oc new-app jenkins-persistent -p ENABLE_OAUTH=true -p MEMORY_LIMIT=2.0Gi -n ${__
 3. Setup SonarQube service for static code analysis in the pipeline:
 	1. Setup the PostgresDB service.
 	```bash
-	oc new-app postgresql-persistent -p POSTGRESQL_USER=sonar -p POSTGRESQL_PASSWORD=sonar -p POSTGRESQL_DATABASE=sonar -p VOLUME_CAPACITY=4Gi -l name='postgresql'
+	oc new-app postgresql-persistent -p POSTGRESQL_USER=dbuser -p POSTGRESQL_PASSWORD=p4ssw0rd -p POSTGRESQL_DATABASE=sonar -p VOLUME_CAPACITY=4Gi -l name='postgresql'
 	```
-	2. Setup the SonarQube App / Service.
+	2. Load the Sonarqube template into OCP and launch it.
 	```bash
-	oc new-app --docker-image=wkulhanek/sonarqube:6.7.3 -e SONARQUBE_JDBC_USERNAME=sonar -e SONARQUBE_JDBC_PASSWORD=sonar -e SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql/sonar -l name=sonarqube
-	oc patch dc sonarqube --patch='{ "spec": { "strategy": { "type": "Recreate" }}}'
-	oc set volume dc/sonarqube --add --overwrite --name=sonarqube-volume-1 --mount-path=/opt/sonarqube/data/ --type persistentVolumeClaim --claim-name=sonarqube-pvc
-	oc set resources dc/sonarqube --limits=memory=3Gi,cpu=2 --requests=memory=1.5Gi,cpu=1
-	oc expose svc/sonarqube
+	oc create -f ocp_templates/sonarqube.json
+	oc new-app sonarqube -p DATABASE_USER=dbuser -p DATABASE_PASS=p4ssw0rd -n ${__OCP_PREFIX}-devops -l name='sonarqube'
 	```
 	3. **Note:** You will need to wait until SonarQube comes online before you can validate the service or use it.  As such, you can execute the following to tail the container logs and look for the
 	   `SonarQube is up` string.
