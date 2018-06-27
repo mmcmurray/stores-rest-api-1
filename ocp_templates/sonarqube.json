@@ -251,7 +251,7 @@
             "description": "The database host.  This can typically be left alone.",
             "displayName": "Database Hostname",
             "name": "DATABASE_HOST",
-            "value": "postgres"
+            "value": "postgresql"
         },
         {
             "description": "The name of the database we connect to.",
