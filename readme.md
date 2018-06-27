@@ -93,12 +93,10 @@ oc new-app jenkins-persistent -p ENABLE_OAUTH=true -p MEMORY_LIMIT=2.0Gi -n ${__
 	2. Setup the SonarQube App / Service.
 	```bash
 	oc new-app --docker-image=wkulhanek/sonarqube:6.7.3 -e SONARQUBE_JDBC_USERNAME=sonar -e SONARQUBE_JDBC_PASSWORD=sonar -e SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql/sonar -l name=sonarqube
-	oc expose svc/sonarqube
-	oc set volume dc/sonarqube --add --overwrite --name=sonarqube-volume-1 --mount-path=/opt/sonarqube/data/ --type persistentVolumeClaim --claim-name=sonarqube-pvc
-	oc set resources dc/sonarqube --limits=memory=3Gi,cpu=2 --requests=memory=2Gi,cpu=1
 	oc patch dc sonarqube --patch='{ "spec": { "strategy": { "type": "Recreate" }}}'
-	oc set probe dc/sonarqube --liveness --failure-threshold 3 --initial-delay-seconds 40 -- echo ok
-	oc set probe dc/sonarqube --readiness --failure-threshold 3 --initial-delay-seconds 20 --get-url=http://:9000/about
+	oc set volume dc/sonarqube --add --overwrite --name=sonarqube-volume-1 --mount-path=/opt/sonarqube/data/ --type persistentVolumeClaim --claim-name=sonarqube-pvc
+	oc set resources dc/sonarqube --limits=memory=3Gi,cpu=2 --requests=memory=1.5Gi,cpu=1
+	oc expose svc/sonarqube
 	```
 	3. **Note:** You will need to wait until SonarQube comes online before you can validate the service or use it.  As such, you can execute the following to tail the container logs and look for the
 	   `SonarQube is up` string.
@@ -130,22 +128,66 @@ oc new-app jenkins-persistent -p ENABLE_OAUTH=true -p MEMORY_LIMIT=2.0Gi -n ${__
 	```bash	
 	oc set volume dc/gogs --add --overwrite --name=config-volume -m /opt/gogs/custom/conf/ -t configmap --configmap-name=gogs
 	```
-	7. Expose route to Gogs server:
+	7. Rollout the latest gogs deployment config:
+	```bash
+	oc rollout latest gogs
+	```
+	8. Expose route to Gogs server:
 	```bash
 	oc expose svc/gogs
 	```
-	8. Navigate to the Gogs UI (can be found via the following:)
+	9. Navigate to the Gogs UI (can be found via the following:)
 	```bash
 	oc get route | grep gogs | gawk '{print $2}' | sed -e 's/\(.*\)/http:\/\/\1/g'
 	```
-	9. Register a new user in Gogs UI so we can create an Organization and Repo.
+	10. Register a new user in Gogs UI so we can create an Organization and Repo.
 		1. **Organization:** `ocp_adv_dev`
 		2. **Repo:** `stores-rest-api-fork`
-	10. Add this project as a remote target to the Git repo.
+	11. Add this project as a remote target to the Git repo.
 	```bash
 	git remote add gogs http://<user>:<pass>@$(oc get route gogs -n ${__OCP_PREFIX}-devops --template='{{ .spec.host }}')/ocp_adv_dev/stores-rest-api-fork
 	```
 5. Create and configure Nexus service for an artifactory / private docker registry.
+	1. Create a PVC for Nexus to use:
+	```bash
+	oc create -f ocp_helpers/1_5-01_nexus_pvc.yaml
+	```
+	2. Create the Nexus Application/Service
+	```bash
+	oc new-app sonatype/nexus3:latest -l name="nexus"
+	```
+	3. Change Deployment Strategy to `Recreate` to ensure we do not have multiple instances running at any given time.  Also, set appropriate resource limits on the service.
+	```bash
+	oc patch dc nexus3 --patch='{ "spec": { "strategy": { "type": "Recreate" }}}'
+	oc set resources dc nexus3 --limits=memory=2Gi --requests=memory=1Gi
+	```
+	4. Set the `nexus3` deployment config to leverage the `nexus-pvc` Persistent Volume Claim
+	```bash
+	oc set volume dc/nexus3 --add --overwrite --name=nexus3-volume-1 --mount-path=/nexus-data/ --type persistentVolumeClaim --claim-name=nexus-pvc
+	```
+	5. Expose the `nexus3` route.
+	```bash
+	oc expose svc nexus3
+	```
+6. Configure liveness and readiness probes for each service we rely on.
+	1. PostgreSQL
+		* **Note:** Already configured as part of the `postgresql-persistent` template.
+	2. Nexus
+	```bash
+	oc set probe dc/nexus3 --liveness --failure-threshold 3 --initial-delay-seconds 60 -- echo ok
+	oc set probe dc/nexus3 --readiness --failure-threshold 3 --initial-delay-seconds 60 --get-url=http://:8081/repository/maven-public/
+	```
+	3. SonarQube
+	```bash
+	oc set probe dc/sonarqube --liveness --failure-threshold 3 --initial-delay-seconds 40 -- echo ok
+	oc set probe dc/sonarqube --readiness --failure-threshold 3 --initial-delay-seconds 20 --get-url=http://:9000/about
+	```
+	4. Gogs
+	```bash
+	oc set probe dc/gogs --liveness --failure-threshold 3 --initial-delay-seconds 60 -- echo ok
+	oc set probe dc/gogs --readiness --failure-threshold 3 --initial-delay-seconds 60 --get-url=http://:3000/
+	```
+	5. Jenkins 
 
 ---
 
