@@ -90,7 +90,7 @@ oc new-app jenkins-persistent -p ENABLE_OAUTH=true -p MEMORY_LIMIT=2.0Gi -n ${__
 	```bash
 	oc new-app postgresql-persistent -p POSTGRESQL_USER=dbuser -p POSTGRESQL_PASSWORD=p4ssw0rd -p POSTGRESQL_DATABASE=sonar -p VOLUME_CAPACITY=4Gi -l name='postgresql'
 	```
-	2. Load the Sonarqube template into OCP and launch it.
+	2. Load the `sonarqube` template into OCP and launch it.
 	```bash
 	oc create -f ocp_templates/sonarqube.json
 	oc new-app sonarqube -p DATABASE_USER=dbuser -p DATABASE_PASS=p4ssw0rd -n ${__OCP_PREFIX}-devops -l name='sonarqube'
@@ -105,42 +105,35 @@ oc new-app jenkins-persistent -p ENABLE_OAUTH=true -p MEMORY_LIMIT=2.0Gi -n ${__
 	```bash
 	oc exec $(oc get pods | grep postgresql | grep -v deploy | gawk '{print $1}') -- bash -c 'createdb gogs -O sonar'
 	```
-	2. Configure a PVC (Persistent Volume Claim) for the Gogs service to use.
-	```bash
-	oc create -f ocp_helpers/1_4-03-gogs_pvc-yaml
-	```
-	3. Create a `ConfigMap` so that we can configure Gogs to talk to the `postgresql` persistent database.
+	2. Create a `ConfigMap` so that we can configure Gogs to talk to the `postgresql` persistent database.
 	```bash
 	oc create configmap gogs --from-file=ocp_helpers/gogs/app.ini
 	```
-	4. Launch the Gogs service:
+	3. Load the `gogs` template into OCP and launch it.
 	```bash
-	oc new-app wkulhanek/gogs:11.34 -l name=gogs
+	oc create -f ocp_templates/gogs.json
+	oc new-app gogs -n ${__OCP_PREFIX}-devops -l name='gogs'
 	```
-	5. Set the Gogs deployment config to use the `gogs-data` PVC
+	4. Pause the gogs application rollout so we can add the configmap to it:
 	```bash
-	oc set volume dc/gogs --add --overwrite --name=gogs-volume-1 --mount-path=/data/ --type persistentVolumeClaim --claim-name=gogs-data
+	oc rollout pause dc gogs
 	```
-	6. Set the Gogs deployment config to use the `gogs` ConfigMap
+	5. Set the Gogs deployment config to use the `gogs` ConfigMap
 	```bash	
 	oc set volume dc/gogs --add --overwrite --name=config-volume -m /opt/gogs/custom/conf/ -t configmap --configmap-name=gogs
 	```
-	7. Rollout the latest gogs deployment config:
+	7. Resume gogs application rollout.:
 	```bash
-	oc rollout latest gogs
+	oc rollout resume dc gogs
 	```
-	8. Expose route to Gogs server:
-	```bash
-	oc expose svc/gogs
-	```
-	9. Navigate to the Gogs UI (can be found via the following:)
+	8. Navigate to the Gogs UI (can be found via the following:
 	```bash
 	oc get route | grep gogs | gawk '{print $2}' | sed -e 's/\(.*\)/http:\/\/\1/g'
 	```
-	10. Register a new user in Gogs UI so we can create an Organization and Repo.
+	9. Register a new user in Gogs UI so we can create an Organization and Repo.
 		1. **Organization:** `ocp_adv_dev`
 		2. **Repo:** `stores-rest-api-fork`
-	11. Add this project as a remote target to the Git repo.
+	10. Add this project as a remote target to the Git repo.
 	```bash
 	git remote add gogs http://<user>:<pass>@$(oc get route gogs -n ${__OCP_PREFIX}-devops --template='{{ .spec.host }}')/ocp_adv_dev/stores-rest-api-fork
 	```

@@ -85,6 +85,7 @@
                                     "claimName": "${SONARQUBE_SERVICE_NAME}-pvc"
                                 }
                             }
+                            
                         ],
                         "containers": [
                             {
@@ -172,7 +173,7 @@
                 "name": "${SONARQUBE_SERVICE_NAME}",
                 "creationTimestamp": null,
                 "labels": {
-                    "app": "sonarqube",
+                    "app": "${SONARQUBE_SERVICE_NAME}",
                     "name": "${SONARQUBE_SERVICE_NAME}"
                 }
             },
