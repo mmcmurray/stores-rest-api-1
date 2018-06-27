@@ -140,44 +140,12 @@ oc new-app jenkins-persistent -p ENABLE_OAUTH=true -p MEMORY_LIMIT=2.0Gi -n ${__
 5. Create and configure Nexus service for an artifactory / private docker registry.
 	1. Create a PVC for Nexus to use:
 	```bash
-	oc create -f ocp_helpers/1_5-01_nexus_pvc.yaml
+	oc create -f ocp_templates/nexus.json
 	```
 	2. Create the Nexus Application/Service
 	```bash
-	oc new-app sonatype/nexus3:latest -l name="nexus"
+	oc new-app nexus -l name="nexus"
 	```
-	3. Change Deployment Strategy to `Recreate` to ensure we do not have multiple instances running at any given time.  Also, set appropriate resource limits on the service.
-	```bash
-	oc patch dc nexus3 --patch='{ "spec": { "strategy": { "type": "Recreate" }}}'
-	oc set resources dc nexus3 --limits=memory=2Gi --requests=memory=1Gi
-	```
-	4. Set the `nexus3` deployment config to leverage the `nexus-pvc` Persistent Volume Claim
-	```bash
-	oc set volume dc/nexus3 --add --overwrite --name=nexus3-volume-1 --mount-path=/nexus-data/ --type persistentVolumeClaim --claim-name=nexus-pvc
-	```
-	5. Expose the `nexus3` route.
-	```bash
-	oc expose svc nexus3
-	```
-6. Configure liveness and readiness probes for each service we rely on.
-	1. PostgreSQL
-		* **Note:** Already configured as part of the `postgresql-persistent` template.
-	2. Nexus
-	```bash
-	oc set probe dc/nexus3 --liveness --failure-threshold 3 --initial-delay-seconds 60 -- echo ok
-	oc set probe dc/nexus3 --readiness --failure-threshold 3 --initial-delay-seconds 60 --get-url=http://:8081/repository/maven-public/
-	```
-	3. SonarQube
-	```bash
-	oc set probe dc/sonarqube --liveness --failure-threshold 3 --initial-delay-seconds 40 -- echo ok
-	oc set probe dc/sonarqube --readiness --failure-threshold 3 --initial-delay-seconds 20 --get-url=http://:9000/about
-	```
-	4. Gogs
-	```bash
-	oc set probe dc/gogs --liveness --failure-threshold 3 --initial-delay-seconds 60 -- echo ok
-	oc set probe dc/gogs --readiness --failure-threshold 3 --initial-delay-seconds 60 --get-url=http://:3000/
-	```
-	5. Jenkins 
 
 ---
 
